@@ -10,15 +10,16 @@ use crate::{PARTICLE_COLOR, PARTICLE_SIZE, WINDOW_SIZE};
 
 const PARTICLE_COUNT: u32 = 1000;
 const PARTICLE_SPACING: f64 = 15.0;
-const GRAVITY: f64 = 300.0;
+const GRAVITY: f64 = 200.0;
 const DAMPENING: f64 = 1.4;
 const SMOOTHING_RADIUS: f64 = 100.0;
 const PARTICLE_MASS: f64 = 1.0;
-const TARGET_DENSITY: f64 = 0.11;
-const DEBUG_TARGET: usize = 10000000;
-const GAS_CONSTANT: f64 = 0.000008;
+const TARGET_DENSITY: f64 = 0.14;
+const DEBUG_TARGET: usize = 0;
+const GAS_CONSTANT: f64 = 0.000010;
 const VISCOSITY: f64 = 150000.0;
 const WALL_FRICTION: f64 = 1.1;
+const SURFACE_TENSION: f64 = 0.000001;
 
 pub struct App {
     points: Vec<Particle>,
@@ -65,9 +66,6 @@ impl App {
                 // EXPERIMENTAL maybe stops the wall climbing?
                 particle.velocity.y /= WALL_FRICTION;
             }
-
-
-            // FOUNTAIN ?
         }
 
         // update grid of particles
@@ -103,7 +101,17 @@ impl App {
             }
         }
 
+        // get surface tension forces
+        let surface_tension_forces = self.calculate_surface_tensions(&densities);
 
+        // apply surface tension forces
+        for (i, tension_force) in surface_tension_forces.iter().enumerate() {
+            let p1 = &mut self.points[i];
+            p1.velocity = p1.velocity + *tension_force * (1.0 / densities[i]);
+            if i == DEBUG_TARGET {
+                println!("surface tension: {:?}", tension_force);
+            }
+        }
     }
 
     fn calculate_pressures(&self, densities: &[f64]) -> Vec<f64> {
@@ -124,8 +132,19 @@ impl App {
         self.points.par_iter().zip(densities)
             .map(|(particle, density)|
                 self.calculate_laplacian(particle, densities, |p2, i| (p2.velocity - particle.velocity) * 0.5)
-                    * (VISCOSITY)
+                    * VISCOSITY
             )
+            .collect()
+    }
+
+    fn calculate_surface_tensions(&self, densities: &[f64]) -> Vec<Vec2> {
+        self.points.par_iter().zip(densities)
+            .map(|(particle, density)| {
+                let gradient = self.calculate_gradient(particle, densities, |_, _| 1.0);
+                let laplacian = self.calculate_laplacian(particle, densities, |_, _| Vec2 {x:1.0, y:0.0});
+                let grad_magnitude = (gradient.x*gradient.x + gradient.y*gradient.y).sqrt();
+                gradient * (-1.0 * SURFACE_TENSION * laplacian.x * grad_magnitude)
+            })
             .collect()
     }
 

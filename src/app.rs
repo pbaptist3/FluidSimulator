@@ -19,7 +19,8 @@ const DEBUG_TARGET: usize = 0;
 const GAS_CONSTANT: f64 = 0.000010;
 const VISCOSITY: f64 = 150000.0;
 const WALL_FRICTION: f64 = 1.1;
-const SURFACE_TENSION: f64 = 0.000001;
+const SURFACE_TENSION: f64 = 0.0000001;
+const MIN_SURFACE_TENSION: f64 = 1.0;
 
 pub struct App {
     points: Vec<Particle>,
@@ -141,9 +142,18 @@ impl App {
         self.points.par_iter().zip(densities)
             .map(|(particle, density)| {
                 let gradient = self.calculate_gradient(particle, densities, |_, _| 1.0);
-                let laplacian = self.calculate_laplacian(particle, densities, |_, _| Vec2 {x:1.0, y:0.0});
+                let laplacian = self.calculate_laplacian(particle, densities, |p2, _|  {
+                    let delta = p2.position - particle.position;
+                    let d = (delta.x*delta.x + delta.y*delta.y).sqrt();
+                    if d < MIN_SURFACE_TENSION {
+                        Vec2 {x: 0.0, y: 0.0}
+                    } else {
+                        delta
+                    }
+                });
                 let grad_magnitude = (gradient.x*gradient.x + gradient.y*gradient.y).sqrt();
-                gradient * (-1.0 * SURFACE_TENSION * laplacian.x * grad_magnitude)
+                let lap_magnitude = (laplacian.x*laplacian.x + laplacian.y*laplacian.y).sqrt();
+                gradient * (-1.0 * SURFACE_TENSION * lap_magnitude * grad_magnitude)
             })
             .collect()
     }

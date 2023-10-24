@@ -9,19 +9,19 @@ use rayon::prelude::*;
 use crate::particle::{Particle, Vec2};
 use crate::{PARTICLE_COLOR, PARTICLE_SIZE, WINDOW_SIZE};
 
-const PARTICLE_COUNT: u32 = 600;
+const PARTICLE_COUNT: u32 = 5;
 const PARTICLE_SPACING: f64 = 15.0;
 const GRAVITY: f64 = 250.0;
 const DAMPENING: f64 = 1.2;
 const SMOOTHING_RADIUS: f64 = 60.0;
 const PARTICLE_MASS: f64 = 1.0;
-const TARGET_DENSITY: f64 = 0.40;
+const TARGET_DENSITY: f64 = 0.38;
 const DEBUG_TARGET: usize = 0;
-const GAS_CONSTANT: f64 = /*0.000010*/ 0.0007;
-const VISCOSITY: f64 = 800000.0;
+const GAS_CONSTANT: f64 = 0.0007;
+const VISCOSITY: f64 = 600000.0;
 const WALL_FRICTION: f64 = 1.10;
-const SURFACE_TENSION: f64 = 0.00001;
-const MIN_SURFACE_TENSION: f64 = 5.0;
+const SURFACE_TENSION: f64 = 0.0001;
+const MIN_SURFACE_TENSION: f64 = 1.0;
 
 pub struct App {
     points: Vec<Particle>,
@@ -48,16 +48,20 @@ impl App {
             particle.position.y += particle.velocity.y * delta_time;
             particle.velocity.y += GRAVITY * delta_time;
 
+
             // we need some bounds
-            if particle.position.y > WINDOW_SIZE.1 as f64 || particle.position.y < 0.0 {
+            if particle.position.y > WINDOW_SIZE.1 as f64 || particle.position.y < 0.0
+            {
                 particle.position.y = if particle.position.y < 0.0 {
                     0.0
                 } else {
                     WINDOW_SIZE.1 as f64
                 };
+
                 particle.velocity.y *= -1.0 / DAMPENING;
                 particle.velocity.x /= WALL_FRICTION;
             }
+
             if particle.position.x > WINDOW_SIZE.0 as f64 || particle.position.x < 0.0 {
                 particle.position.x = if particle.position.x < 0.0 {
                     0.0
@@ -82,38 +86,11 @@ impl App {
         let pressures = self.calculate_pressures(&densities);
         let pressure_forces = self.calculate_pressure_forces(&pressures, &densities);
 
-        // apply pressures
-        // for (i, gradient) in pressure_forces.iter().enumerate() {
-        //     let p1 = &mut self.points[i];
-        //     p1.velocity = p1.velocity + *gradient * (1.0 / densities[i]);
-        //     if i == DEBUG_TARGET {
-        //         println!("gradient: {:?}\tdensity: {:?}", gradient, densities[i]);
-        //     }
-        // }
-
         // get viscosity forces
         let viscosity_forces = self.calculate_viscosities(&densities);
 
-        // apply viscosity forces
-        // for (i, viscosity_force) in viscosity_forces.iter().enumerate() {
-        //     let p1 = &mut self.points[i];
-        //     p1.velocity = p1.velocity + *viscosity_force * (1.0 / densities[i]);
-        //     if i == DEBUG_TARGET {
-        //         println!("viscosity: {:?}", viscosity_force);
-        //     }
-        // }
-
         // get surface tension forces
         let surface_tension_forces = self.calculate_surface_tensions(&densities);
-
-        // apply surface tension forces
-        // for (i, tension_force) in surface_tension_forces.iter().enumerate() {
-        //     let p1 = &mut self.points[i];
-        //     p1.velocity = p1.velocity + *tension_force * (1.0 / densities[i]);
-        //     if i == DEBUG_TARGET {
-        //         println!("surface tension: {:?}", tension_force);
-        //     }
-        // }
 
         // appply all the forces
         self.points.par_iter_mut()
@@ -130,6 +107,7 @@ impl App {
                     println!("gradient: {:?}\tdensity: {:?}", pressure, densities[i]);
                     println!("viscosity: {:?}", viscosity);
                     println!("surface tension: {:?}", tension);
+                    println!();
                 }
             });
     }
@@ -299,7 +277,7 @@ impl App {
 
         let midpoint = (WINDOW_SIZE.0 as f64 / 2.0, WINDOW_SIZE.1 as f64 / 4.0 * 3.0);
         // generate a relatively square grid of particles at start
-        let height = PARTICLE_COUNT * PARTICLE_SPACING as u32 / (WINDOW_SIZE.0) - 1;
+        let height = PARTICLE_COUNT * PARTICLE_SPACING as u32 / (WINDOW_SIZE.0) + 1;
         //let height = (PARTICLE_COUNT as f64 * WINDOW_SIZE.0 as f64 / PARTICLE_SPACING - 10.0).floor() as u32;
         let width = PARTICLE_COUNT / height + 1;
         'particle_loop: for row in 0..height {

@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use std::fmt::DebugList;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::rect::Rect;
@@ -8,19 +9,19 @@ use rayon::prelude::*;
 use crate::particle::{Particle, Vec2};
 use crate::{PARTICLE_COLOR, PARTICLE_SIZE, WINDOW_SIZE};
 
-const PARTICLE_COUNT: u32 = 1000;
+const PARTICLE_COUNT: u32 = 600;
 const PARTICLE_SPACING: f64 = 15.0;
-const GRAVITY: f64 = 200.0;
-const DAMPENING: f64 = 1.4;
-const SMOOTHING_RADIUS: f64 = 100.0;
+const GRAVITY: f64 = 250.0;
+const DAMPENING: f64 = 1.2;
+const SMOOTHING_RADIUS: f64 = 60.0;
 const PARTICLE_MASS: f64 = 1.0;
-const TARGET_DENSITY: f64 = 0.14;
+const TARGET_DENSITY: f64 = 0.40;
 const DEBUG_TARGET: usize = 0;
-const GAS_CONSTANT: f64 = 0.000010;
-const VISCOSITY: f64 = 150000.0;
-const WALL_FRICTION: f64 = 1.1;
-const SURFACE_TENSION: f64 = 0.0000001;
-const MIN_SURFACE_TENSION: f64 = 1.0;
+const GAS_CONSTANT: f64 = /*0.000010*/ 0.0007;
+const VISCOSITY: f64 = 800000.0;
+const WALL_FRICTION: f64 = 1.10;
+const SURFACE_TENSION: f64 = 0.00001;
+const MIN_SURFACE_TENSION: f64 = 5.0;
 
 pub struct App {
     points: Vec<Particle>,
@@ -82,37 +83,55 @@ impl App {
         let pressure_forces = self.calculate_pressure_forces(&pressures, &densities);
 
         // apply pressures
-        for (i, gradient) in pressure_forces.iter().enumerate() {
-            let p1 = &mut self.points[i];
-            p1.velocity = p1.velocity + *gradient * (1.0 / densities[i]);
-            if i == DEBUG_TARGET {
-                println!("gradient: {:?}\tdensity: {:?}", gradient, densities[i]);
-            }
-        }
+        // for (i, gradient) in pressure_forces.iter().enumerate() {
+        //     let p1 = &mut self.points[i];
+        //     p1.velocity = p1.velocity + *gradient * (1.0 / densities[i]);
+        //     if i == DEBUG_TARGET {
+        //         println!("gradient: {:?}\tdensity: {:?}", gradient, densities[i]);
+        //     }
+        // }
 
         // get viscosity forces
         let viscosity_forces = self.calculate_viscosities(&densities);
 
         // apply viscosity forces
-        for (i, viscosity_force) in viscosity_forces.iter().enumerate() {
-            let p1 = &mut self.points[i];
-            p1.velocity = p1.velocity + *viscosity_force * (1.0 / densities[i]);
-            if i == DEBUG_TARGET {
-                println!("viscosity: {:?}", viscosity_force);
-            }
-        }
+        // for (i, viscosity_force) in viscosity_forces.iter().enumerate() {
+        //     let p1 = &mut self.points[i];
+        //     p1.velocity = p1.velocity + *viscosity_force * (1.0 / densities[i]);
+        //     if i == DEBUG_TARGET {
+        //         println!("viscosity: {:?}", viscosity_force);
+        //     }
+        // }
 
         // get surface tension forces
         let surface_tension_forces = self.calculate_surface_tensions(&densities);
 
         // apply surface tension forces
-        for (i, tension_force) in surface_tension_forces.iter().enumerate() {
-            let p1 = &mut self.points[i];
-            p1.velocity = p1.velocity + *tension_force * (1.0 / densities[i]);
-            if i == DEBUG_TARGET {
-                println!("surface tension: {:?}", tension_force);
-            }
-        }
+        // for (i, tension_force) in surface_tension_forces.iter().enumerate() {
+        //     let p1 = &mut self.points[i];
+        //     p1.velocity = p1.velocity + *tension_force * (1.0 / densities[i]);
+        //     if i == DEBUG_TARGET {
+        //         println!("surface tension: {:?}", tension_force);
+        //     }
+        // }
+
+        // appply all the forces
+        self.points.par_iter_mut()
+            .zip(pressure_forces.par_iter())
+            .zip(viscosity_forces.par_iter())
+            .zip(surface_tension_forces.par_iter())
+            .enumerate()
+            .for_each(|(i, (((point, pressure), viscosity), tension))| {
+                let p1 = point;
+                p1.velocity = p1.velocity
+                    + (*pressure + *viscosity + *tension) * (1.0 / densities[i]);
+
+                if i == DEBUG_TARGET {
+                    println!("gradient: {:?}\tdensity: {:?}", pressure, densities[i]);
+                    println!("viscosity: {:?}", viscosity);
+                    println!("surface tension: {:?}", tension);
+                }
+            });
     }
 
     fn calculate_pressures(&self, densities: &[f64]) -> Vec<f64> {
@@ -152,8 +171,8 @@ impl App {
                     }
                 });
                 let grad_magnitude = (gradient.x*gradient.x + gradient.y*gradient.y).sqrt();
-                let lap_magnitude = (laplacian.x*laplacian.x + laplacian.y*laplacian.y).sqrt();
-                gradient * (-1.0 * SURFACE_TENSION * lap_magnitude * grad_magnitude)
+                let laplacian = laplacian.x + laplacian.y;
+                gradient * (-1.0 * SURFACE_TENSION * laplacian * grad_magnitude)
             })
             .collect()
     }
@@ -188,12 +207,18 @@ impl App {
             .enumerate()
             .fold(|| Vec2 {x: 0.0, y: 0.0}, |sum, (i, (particle2, density))| {
                 // skip if particles are the same
-                if particle.position == particle2.position {
+                if *particle == **particle2 {
                     return sum;
                 }
+
                 let property_value = property(particle2, i);
                 let result = if *density == 0.0 {
                     Vec2 {x: 0.0, y: 0.0}
+                } else if particle.position == particle2.position {
+                    Vec2 {
+                        x: rand::random::<f64>()*0.1 - 0.05,
+                        y: rand::random::<f64>()*0.1 - 0.05,
+                    }
                 } else {
                     kernel_gradient(&particle, &particle2) * (property_value * PARTICLE_MASS / density)
                 };

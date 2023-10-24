@@ -255,88 +255,11 @@ impl App {
     fn calculate_density(&self, particle: &Particle) -> f64 {
         let mut sum = 0.0;
         for particle2 in self.iter_nearby_particles(particle.position) {
-            // skip if particles are the same
-            //if particle2 == particle {
-            //    continue;
-            //}
             let result = PARTICLE_MASS * smoothing_kernel(&particle, &particle2);
             sum += result;
         }
         sum
     }
-
-    /*fn calculate_property<F>(&self, particle: &Particle, densities: &[f64], property: F) -> f64
-        where
-            F: Fn(&Particle, usize) -> f64
-    {
-        let mut sum = 0.0;
-        for (i, (particle2, density)) in self.iter_nearby_particles(particle.position).iter().zip(densities).enumerate() {
-            // skip if particles are the same
-            if particle.position == particle2.position {
-                continue;
-            }
-            let property_value = property(particle2, i);
-            let result = smoothing_kernel(&particle, &particle2) * (property_value * PARTICLE_MASS / density);
-            sum += result;
-        }
-        sum
-    }
-
-    fn calculate_gradient<F>(&self, particle: &Particle, densities: &[f64], property: F) -> Vec2
-        where
-            F: Fn(&Particle, usize) -> f64
-    {
-        let mut sum = Vec2 {x: 0.0, y: 0.0};
-        for (i, (particle2, density)) in self.iter_nearby_particles(particle.position).iter().zip(densities).enumerate() {
-            // skip if particles are the same
-            if particle.position == particle2.position {
-                continue;
-            }
-            let property_value = property(particle2, i);
-            let result = if *density == 0.0 {
-                Vec2 {x: 0.0, y: 0.0}
-            } else {
-                kernel_gradient(&particle, &particle2) * (property_value * PARTICLE_MASS / density)
-            };
-            sum = sum + result;
-        }
-        sum
-    }
-
-    fn calculate_laplacian<F>(&self, particle: &Particle, densities: &[f64], property: F) -> Vec2
-        where
-            F: Fn(&Particle, usize) -> Vec2
-    {
-        let mut sum = Vec2 {x: 0.0, y: 0.0};
-        for (i, (particle2, density)) in self.iter_nearby_particles(particle.position).iter().zip(densities).enumerate() {
-            // skip if particles are the same
-            if particle.position == particle2.position {
-                continue;
-            }
-            let property_value = property(particle2, i);
-            let result = if *density == 0.0 {
-                Vec2 {x: 0.0, y: 0.0}
-            } else {
-                property_value * (kernel_laplacian(&particle, &particle2) * PARTICLE_MASS / density)
-            };
-            sum = sum + result;
-        }
-        sum
-    }
-
-    /// calculates density by summing smoothing kernel * mass over all particles
-    fn calculate_density(&self, particle: &Particle) -> f64 {
-        let mut sum = 0.0;
-        for particle2 in self.iter_nearby_particles(particle.position) {
-            // skip if particles are the same
-            //if particle2 == particle {
-            //    continue;
-            //}
-            let result = PARTICLE_MASS * smoothing_kernel(&particle, &particle2);
-            sum += result;
-        }
-        sum
-    }*/
 
     // update physics then draw
     pub fn draw(&mut self, canvas: &mut Canvas<Window>, delta_time: f64, is_paused: bool) {

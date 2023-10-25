@@ -43,13 +43,15 @@ impl Mul<f64> for Vec2 {
 pub struct Particle {
     pub position: Vec2,
     pub velocity: Vec2,
+    is_wall: bool
 }
 
 impl Particle {
-    pub fn at_rest(position: (f64, f64)) -> Self {
+    pub fn at_rest(position: (f64, f64), is_wall: bool) -> Self {
         Self {
             position: Vec2 {x: position.0, y: position.1},
             velocity: Vec2 {x: 0.0, y: 0.0},
+            is_wall
         }
     }
 
@@ -57,6 +59,11 @@ impl Particle {
         Self {
             position: Vec2 {x: position.0, y: position.1},
             velocity: Vec2 {x: rand::random::<f64>() * 400.0 - 200.0, y: rand::random::<f64>() * 200.0 - 100.0},
+            is_wall: false,
         }
+    }
+
+    pub fn is_wall(&self) -> bool {
+        self.is_wall
     }
 }

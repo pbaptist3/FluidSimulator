@@ -1,3 +1,5 @@
+extern crate core;
+
 mod app;
 mod particle;
 
@@ -13,19 +15,21 @@ use crate::particle::Vec2;
 const BG_COLOR: Color = Color::RGB(0, 0, 0);
 const FRAME_RATE_CAP: i64 = 2000;
 pub const PARTICLE_COLOR: Color = Color::RGB(0, 150, 0);
+pub const WALL_PARTICLE_COLOR: Color = Color::RGB(0, 100, 0);
 pub const PARTICLE_SIZE: u32 = 6;
-pub const WINDOW_SIZE: (u32, u32) = (2000, 1280);
+pub const WINDOW_SIZE: (u32, u32) = (900, 600);
 
-const MOUSE_DRAG_FORCE: f64 = 5.0;
-const MOUSE_DRAG_RADIUS: f64 = 400.0;
+const MOUSE_DRAG_FORCE: f64 = 8.0;
+const MOUSE_DRAG_RADIUS: f64 = 150.0;
 
-const THREAD_COUNT: usize = 16;
+const THREAD_COUNT: usize = 20;
 
 pub fn main() {
     // init threadpool
     ThreadPoolBuilder::new()
         .num_threads(THREAD_COUNT)
-        .build_global();
+        .build_global()
+        .unwrap();
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
